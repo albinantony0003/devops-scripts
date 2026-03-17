@@ -7,6 +7,7 @@ A collection of useful scripts for DevOps activities, automation, and system adm
 | Script Name | Description | Directory |
 | :--- | :--- | :--- |
 | **Compare Files** | A Python utility to find unique lines between two text files. | [`compare-files/`](./compare-files/) |
+| **Top Pods Script** | A PowerShell script to profile CPU usage of new K8s pods during warmup. | [`top pods script/`](./top pods script/) |
 
 ---
 
@@ -21,6 +22,17 @@ This script helps in comparing two text files and identifying items that are uni
 3. Run the script:
    ```bash
    python compare-files/compare_files.py
+   ```
+
+### 📈 Top Pods Script
+A PowerShell script for monitoring the CPU usage of newly created Kubernetes pods during their warmup period. Over the first 5 minutes of a pod's lifecycle, it lists trends and outputs a CSV profile.
+
+#### Usage
+1. Open [`script.ps1`](./top pods script/script.ps1).
+2. Configure variables `$NAMESPACE`, `$SELECTOR`, and `$INTERVAL`.
+3. Run the script:
+   ```powershell
+   .\top pods script\script.ps1
    ```
 
 ---
