@@ -1,6 +1,6 @@
-$NAMESPACE = "namespace"
-$SELECTOR  = "app=app"
-$INTERVAL  = 10
+$NAMESPACE = "dz-sandbox"
+$SELECTOR  = "app=dz-collector-service"
+$INTERVAL  = 5
 $OUTPUT_FILE = "warmup_profile_$(Get-Date -Format 'yyyyMMdd_HHmmss').csv"
 
 "timestamp,pod,cpu_millicores,delta_m,trend,age_seconds,status" | Tee-Object -FilePath $OUTPUT_FILE
