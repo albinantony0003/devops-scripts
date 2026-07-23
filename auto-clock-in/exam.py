@@ -6,6 +6,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from time import sleep
+from tkinter import *
+from tkinter import messagebox 
 
 options = Options()
 options.add_experimental_option("detach", True)
@@ -33,12 +35,21 @@ for link in links:
         if link.is_displayed():
             try:
                 link.click()
-                print("Successfully clicked the visible English flag.")
-                break
             except Exception as click_err:
-                print("Standard click was intercepted. Using JS fallback click.", click_err)
+                messagebox.showerror("showerror", "Standard click was intercepted. Using JS fallback click.")
                 driver.execute_script("arguments[0].click();", link)
                 break
+            else:
+                messagebox.showinfo("showinfo", "Successfully clicked the visible English flag.")
+                break
+
+# root = Tk() 
+# root.geometry("300x200") 
+
+# w = Label(root, text ='GeeksForGeeks', font = "50") 
+# w.pack()
+
+# messagebox.showinfo("showinfo", "Information") 
 
 # for link in links:
 #    if "Gallery" in link.get_attribute("innerHTML"):
