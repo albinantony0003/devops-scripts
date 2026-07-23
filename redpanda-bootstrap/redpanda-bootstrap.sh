@@ -168,38 +168,43 @@ case "${ACTION}" in
     # ── start ─────────────────────────────────────────────────────────────────
     # Uses: instance IDs (EC2 API)
     start)
-        action_start "${INSTANCE_IDS}"
+        action_instance_start "${INSTANCE_IDS}"
+        sleep 10
+        action_ping "${INSTANCE_IPS}"
+        action_disk_mount_tune "${INSTANCE_IPS}"
+        action_cluster_config_update "${FIRST_IP}"
+        action_redpanda_restart "${INSTANCE_IPS}"
         ;;
 
     # ── stop ──────────────────────────────────────────────────────────────────
     # Uses: all instance IDs (EC2 API) + first IP (SSH topic backup)
     stop)
-        action_stop "${INSTANCE_IDS}" "${FIRST_IP}"
+        action_instance_stop "${INSTANCE_IDS}" "${FIRST_IP}"
         ;;
 
     # ── ping ──────────────────────────────────────────────────────────────────
     # Uses: all instance IPs (ICMP + SSH connectivity)
-    ping)
-        action_ping "${INSTANCE_IPS}"
-        ;;
+    # ping)
+    #     action_ping "${INSTANCE_IPS}"
+    #     ;;
 
-    # ── disk-mount-tune ───────────────────────────────────────────────────────
-    # Uses: all instance IPs (SSH to run disk/tune script)
-    disk-mount-tune)
-        action_disk_mount_tune "${INSTANCE_IPS}"
-        ;;
+    # # ── disk-mount-tune ───────────────────────────────────────────────────────
+    # # Uses: all instance IPs (SSH to run disk/tune script)
+    # disk-mount-tune)
+    #     action_disk_mount_tune "${INSTANCE_IPS}"
+    #     ;;
 
-    # ── config-update ─────────────────────────────────────────────────────────
-    # Uses: first instance IP only (SSH cluster config + topic creation)
-    config-update)
-        action_config_update "${FIRST_IP}"
-        ;;
+    # # ── config-update ─────────────────────────────────────────────────────────
+    # # Uses: first instance IP only (SSH cluster config + topic creation)
+    # config-update)
+    #     action_cluster_config_update "${FIRST_IP}"
+    #     ;;
 
-    # ── restart-redpanda ──────────────────────────────────────────────────────
-    # Uses: all instance IPs (SSH systemctl restart)
-    restart-redpanda)
-        action_restart "${INSTANCE_IPS}"
-        ;;
+    # # ── restart-redpanda ──────────────────────────────────────────────────────
+    # # Uses: all instance IPs (SSH systemctl restart)
+    # restart-redpanda)
+    #     action_redpanda_restart "${INSTANCE_IPS}"
+    #     ;;
 
 esac
 

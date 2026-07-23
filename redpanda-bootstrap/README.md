@@ -16,24 +16,16 @@ redpanda-bootstrap/
 │   ├── logging.sh                 # Shared ANSI colour/icon log helpers
 │   └── inventory.sh               # S3 inventory fetch + parse helpers
 │
-├── actions/
-│   ├── start.sh                   # Start all EC2 instances
-│   ├── stop.sh                    # Topic backup → stop all EC2 instances
-│   ├── ping.sh                    # ICMP + SSH connectivity check on all nodes
-│   ├── disk-mount-tune.sh         # NVMe mount + XFS format + rpk tune (all nodes)
-│   ├── config-update.sh           # rpk cluster config + topic creation (single node)
-│   └── restart.sh                 # systemctl restart redpanda (all nodes)
-│
-├── ec2-instance-start/            # Legacy standalone script (reference only)
-├── ec2-instance-stop/             # Legacy standalone script (reference only)
-├── disk-mounting-tune/            # Legacy standalone script (reference only)
-├── config-update/                 # Legacy standalone script (reference only)
-├── redpanda-restart/              # Legacy standalone script (reference only)
-└── topic-backup/                  # Legacy standalone script (reference only)
+└── actions/
+   ├── start.sh                   # Start all EC2 instances
+   ├── stop.sh                    # Topic backup → stop all EC2 instances
+   ├── ping.sh                    # ICMP + SSH connectivity check on all nodes
+   ├── disk-mount-tune.sh         # NVMe mount + XFS format + rpk tune (all nodes)
+   ├── config-update.sh           # rpk cluster config + topic creation (single node)
+   └── restart.sh                 # systemctl restart redpanda (all nodes)
 ```
 
 ---
-
 ## S3 Inventory Layout
 
 The orchestrator fetches three inventory files from S3 before every run.
@@ -86,7 +78,9 @@ notifications        3
 |-----------|------|----------------|
 | `COLOUR` | Choice | `blue`, `green` |
 | `CLUSTER_NAME` | Choice | `core`, `ingest`, `analytics` |
-| `ACTION` | Choice | `start`, `stop`, `ping`, `disk-mount-tune`, `config-update`, `restart-redpanda` |
+| `ACTION` | Choice | `start`, `stop`, `ping`*, `disk-mount-tune`*, `config-update`*, `restart-redpanda`* |
+
+> \* **Note on Actions**: Standalone execution of helper actions (`ping`, `disk-mount-tune`, `config-update`, `restart-redpanda`) is currently commented out in the dispatch block of `redpanda-bootstrap.sh`. Instead, they run sequentially as part of the unified `start` action pipeline.
 
 ### Shell Build Step
 
@@ -117,11 +111,16 @@ bash ${WORKSPACE}/redpanda-bootstrap/redpanda-bootstrap.sh
 ## Actions Reference
 
 ### `start`
-Starts all EC2 instances for the selected colour/cluster using instance IDs from `inventory.txt`. Waits until all instances reach the `running` state.
+Starts all EC2 instances for the selected colour/cluster using instance IDs from `inventory.txt`. Once all instances reach the `running` state, it automatically runs the complete setup and initialization pipeline sequentially:
+1. **`ping`** (Connectivity health check across all nodes)
+2. **`disk-mount-tune`** (NVMe disk formatting, mounting, and production tuning on all nodes)
+3. **`config-update`** (Cluster config application and topic creation on the first node)
+4. **`restart-redpanda`** (Redpanda service restart and status validation on all nodes)
 
 ```
-Reads from inventory: instance IDs (column 1)
+Reads from inventory: Instance IDs, All IPs, First IP only
 AWS calls: ec2 start-instances, ec2 wait instance-running
+SSH calls: Formats/mounts NVMe, tunes rpk, updates cluster configs, restarts services
 ```
 
 ---
@@ -143,76 +142,50 @@ AWS calls: ec2 stop-instances, ec2 wait instance-stopped, s3 sync
 
 ---
 
-### `ping`
+### Standalone Helpers (Run as part of `start`)
+
+The following helper modules are sourced and executed within the `start` pipeline, but their standalone execution dispatch blocks are currently commented out:
+
+#### `ping`
 Connectivity health check across all nodes. For each IP in `inventory.txt`:
 - ICMP ping (3 packets, 5s timeout) — warns if blocked by security group, does not fail
 - SSH check (`echo SSH_OK`) — **fails** if SSH is not reachable
 
-Prints a per-node summary table at the end.
-
-```
-Reads from inventory: all IPs (column 2)
-```
-
----
-
-### `disk-mount-tune`
+#### `disk-mount-tune`
 Runs the NVMe disk initialisation and Redpanda tuning script on **every node**:
 1. SCP `disk-mounting-tune/script.sh` to the node
 2. Execute via `sudo bash` (requires root/sudo)
 3. Script: detects NVMe instance storage → formats as XFS → mounts to `/mnt/vectorized` → sets ownership → runs `rpk redpanda mode prod` + `rpk redpanda tune all`
 
-```
-Reads from inventory: all IPs
-Requires: sudo on target nodes
-```
-
----
-
-### `config-update`
+#### `config-update`
 Applies cluster configuration and recreates all topics on the **first node** only:
 1. SCP `topic.txt` and `partition.txt` to node `/tmp/`
 2. SSH: apply `rpk cluster config set` settings (idempotent)
 3. SSH: create `__consumer_offsets` with correct partition count
 4. SSH: recreate all application topics from `topic.txt` / `partition.txt`
 
-```
-Reads from inventory: first IP only + topic.txt + partition.txt
-```
-
----
-
-### `restart-redpanda`
+#### `restart-redpanda`
 Restarts the Redpanda service on **every node** via SSH:
 1. `sudo systemctl restart redpanda`
 2. Polls `systemctl is-active redpanda` every 5 seconds for up to 60 seconds
 3. Fails the build if any node does not become active
 
-```
-Reads from inventory: all IPs
-```
-
 ---
 
 ## Action × Inventory Mapping
 
-| Action | Instance IDs | All IPs | First IP only |
-|--------|:---:|:---:|:---:|
-| `start` | ✅ | | |
-| `stop` | ✅ | | ✅ (backup) |
-| `ping` | | ✅ | |
-| `disk-mount-tune` | | ✅ | |
-| `config-update` | | | ✅ |
-| `restart-redpanda` | | ✅ | |
+| Action | Instance IDs | All IPs | First IP only | Sourced Helper Actions |
+|--------|:---:|:---:|:---:|---|
+| `start` | ✅ | ✅ | ✅ | Runs `ping` → `disk-mount-tune` → `config-update` → `restart-redpanda` |
+| `stop` | ✅ | | ✅ (backup) | None |
 
 ---
 
-## Recommended Validation Order
+## Execution Sequence
 
-When deploying a new cluster for the first time, run actions in this order:
-
+When starting/deploying a cluster, run:
 ```
-ping  →  disk-mount-tune  →  config-update  →  restart-redpanda  →  start
+start (automatically runs: ping → disk-mount-tune → config-update → restart-redpanda)
 ```
 
 Run `stop` only after traffic has been fully drained.
@@ -225,7 +198,7 @@ Run `stop` only after traffic has been fully drained.
 # Set required parameters as env vars
 export COLOUR=blue
 export CLUSTER_NAME=core
-export ACTION=ping
+export ACTION=start
 
 # Optional overrides
 export SSH_USER=ubuntu
@@ -238,7 +211,7 @@ bash redpanda-bootstrap.sh
 Positional args are also supported as a fallback:
 
 ```bash
-bash redpanda-bootstrap.sh blue core ping
+bash redpanda-bootstrap.sh blue core start
 ```
 
 ---
