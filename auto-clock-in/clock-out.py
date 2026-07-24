@@ -30,7 +30,7 @@ try:
         EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Web Clock-out')]"))
     )
     clock_out_button.click()
-    messagebox.showinfo("showinfo", "Successfully clicked on Web Clock-out button.")
+    # messagebox.showinfo("showinfo", "Successfully clicked on Web Clock-out button.")
 
     # Wait for and click the final "Clock-out" confirmation button
     confirm_clock_out = WebDriverWait(driver, 5).until(
