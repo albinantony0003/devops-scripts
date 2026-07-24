@@ -37,6 +37,6 @@ try:
         EC.element_to_be_clickable((By.XPATH, "//button[text()='Clock-out']"))
     )
     confirm_clock_out.click()
-    messagebox.showinfo("showinfo", "Successfully confirmed Clock-out.")
+    messagebox.showinfo("showinfo", "Successfully Confirmed Clock-Out!")
 except Exception as e:
     messagebox.showerror("showerror", "Web Clock-out button was not found or is not clickable (possibly already clocked out):", e)

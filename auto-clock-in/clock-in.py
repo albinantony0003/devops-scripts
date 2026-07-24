@@ -47,11 +47,11 @@ try:
             WebDriverWait(driver, 5).until(
                 EC.presence_of_element_located((By.XPATH, "//button[contains(text(), 'Web Clock-out')]"))
             )
-            messagebox.showinfo("showinfo", "Successfully clocked in! Web Clock-out button is now visible.")
+            messagebox.showinfo("showinfo", "Successfully Confirmed Clock-In!")
             clocked_in = True
             break
         except Exception:
-            messagebox.showerror("showerror", "Status did not change yet. Retrying...")
+            #messagebox.showerror("showerror", "Status did not change yet. Retrying...")
             time.sleep(1.5)
             
     if not clocked_in:
