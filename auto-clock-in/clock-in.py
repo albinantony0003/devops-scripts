@@ -14,7 +14,7 @@ options=webdriver.ChromeOptions()
 options.add_experimental_option("detach", True)
 
 #set Data Dir
-options.add_argument(r"--user-data-dir=D:\Workplace\Chrome\Profile 1")
+options.add_argument(r"--user-data-dir=D:\Workplace\Chrome")
 
 
 # Start the webdriver (Selenium 4+ automatically downloads and manages the driver)
